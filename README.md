@@ -46,15 +46,4 @@ Formulário completo para cadastrar novos alertas com:
 ### 🧹 Limpeza de Dados
 - Função com **modal de confirmação** para remover todos os registros armazenados
 
----
 
-## ⚙️ Como Executar o Projeto
-
-Este projeto é **totalmente client-side** — não requer servidor backend.
-
-```bash
-# Clone o repositório
-git clone https://github.com/seu-usuario/sistema-alertas-defesa-civil.git
-
-# Entre na pasta do projeto
-cd sistema-alertas-defesa-civil
