@@ -375,5 +375,50 @@ button:disabled {
     .filters {
         grid-template-columns: 1fr;
     }
-
+    .card {
+            height: auto;
+            /* Remove o comportamento flex do mapa para que ele volte à altura padrão do conteúdo */
+            display: block;
+        }
+        #map {
+            height: 300px;
+            /* Altura fixa para o mapa no celular (melhor que 100% de uma altura indefinida) */
+        }
+    
+        /* * Garantir que os filtros sejam empilhados em telas menores.
+         */
+        .filters {
+            grid-template-columns: 1fr;
+            /* Mudar de 3 colunas para 1 coluna */
+            gap: 15px;
+            /* Aumenta o espaçamento para melhorar o toque */
+        }
+    
+        /* * Ajustes de espaçamento e tipografia
+         */
+        body {
+            padding: 10px;
+        }
+    
+        h1 {
+            font-size: 1.5em;
+        }
+    
+        .card {
+            padding: 20px;
+        }
+    
+        /* Se a busca de endereço estiver muito apertada */
+        .form-group {
+            display: block;
+        }
+    
+        .geocoding-btn {
+            width: 100%;
+            margin-top: 10px;
+        }
+    
+        .button-group {
+            grid-template-columns: 1fr;
+        }
 }
