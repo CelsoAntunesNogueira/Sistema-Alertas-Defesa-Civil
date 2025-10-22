@@ -61,7 +61,7 @@ h1 {
 }
 
 #map {
-    height: 500px;
+    height: 90%;
     border-radius: 8px;
     margin-top: 10px;
 }
@@ -375,4 +375,5 @@ button:disabled {
     .filters {
         grid-template-columns: 1fr;
     }
+
 }
