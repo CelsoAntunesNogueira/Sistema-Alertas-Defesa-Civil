@@ -2,6 +2,7 @@
 let alertas = [];
 let map;
 let markers = [];
+let tempMarker = null; // Variável para o novo marcador temporário ao clicar
 
 // Carregar dados do LocalStorage
 function loadFromStorage() {
@@ -22,32 +23,54 @@ function saveToStorage() {
 
 // Limpa todos os marcadores e os adiciona novamente (essencial para filtros)
 function updateMarkersOnMap(alertasParaExibir) {
-    // 1. Remover todos os marcadores existentes
+    // 1. Remover todos os marcadores permanentes existentes
     markers.forEach(marker => map.removeLayer(marker));
     markers = [];
-
+    
     // 2. Adicionar os marcadores filtrados/exibidos
     alertasParaExibir.forEach(alerta => addMarker(alerta));
 }
 
 // Inicializar mapa
 function initMap() {
-    // Coordenadas centrais de São Paulo: -23.550520, -46.633308
-    map = L.map('map').setView([-22.9189, -42.8189], 12);
+    // Coordenadas centrais de Maricá: -22.9189, -42.8189
+    map = L.map('map').setView([-22.9189, -42.8189], 12); 
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© OpenStreetMap contributors',
         maxZoom: 19
     }).addTo(map);
 
-    map.on('click', function (e) {
-        document.getElementById('latitude').value = e.latlng.lat.toFixed(6);
-        document.getElementById('longitude').value = e.latlng.lng.toFixed(6);
+    map.on('click', function(e) {
+        const lat = e.latlng.lat.toFixed(6);
+        const lon = e.latlng.lng.toFixed(6);
+        
+        // Atualiza os campos de Latitude e Longitude
+        document.getElementById('latitude').value = lat;
+        document.getElementById('longitude').value = lon;
+
+        // LÓGICA DO MARCADOR TEMPORÁRIO
+        // 1. Remover o marcador temporário anterior, se existir
+        if (tempMarker) {
+            map.removeLayer(tempMarker);
+        }
+
+        // 2. Criar um ícone distinto para o clique
+        const tempIcon = L.divIcon({
+            className: 'temp-marker-icon', 
+            html: `<div style="background-color: #00bfff; width: 25px; height: 25px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.3);"></div>`,
+            iconSize: [25, 25],
+            iconAnchor: [12.5, 12.5]
+        });
+
+        // 3. Adicionar o novo marcador temporário e salvar a referência
+        tempMarker = L.marker([lat, lon], { icon: tempIcon }).addTo(map)
+            .bindPopup(`Local do clique: ${lat}, ${lon}`).openPopup();
     });
 }
 
 // Buscar coordenadas pelo endereço (Geocoding)
-document.getElementById('buscarEndereco').addEventListener('click', async function () {
+document.getElementById('buscarEndereco').addEventListener('click', async function() {
     const endereco = document.getElementById('endereco').value;
 
     if (!endereco) {
@@ -60,13 +83,12 @@ document.getElementById('buscarEndereco').addEventListener('click', async functi
     btn.innerHTML = '🔍 Buscando... <span class="loading"></span>';
 
     try {
-        // CORREÇÃO #1: Adição do protocolo 'https://' e uso de template string (`...`)
         const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(endereco)}&limit=1`);
-
+        
         if (!response.ok) {
             throw new Error(`Erro de rede: ${response.status}`);
         }
-
+        
         const data = await response.json();
 
         if (data.length > 0) {
@@ -77,6 +99,19 @@ document.getElementById('buscarEndereco').addEventListener('click', async functi
             document.getElementById('longitude').value = lon.toFixed(6);
 
             map.setView([lat, lon], 15);
+            
+            // Adiciona o marcador temporário na busca de endereço também
+            if (tempMarker) {
+                map.removeLayer(tempMarker);
+            }
+             const tempIcon = L.divIcon({
+                className: 'temp-marker-icon',
+                html: `<div style="background-color: #00bfff; width: 25px; height: 25px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.3);"></div>`,
+                iconSize: [25, 25],
+                iconAnchor: [12.5, 12.5]
+            });
+            tempMarker = L.marker([lat, lon], { icon: tempIcon }).addTo(map)
+            .bindPopup(`Endereço encontrado: ${data[0].display_name}`).openPopup();
 
             alert('✅ Coordenadas encontradas com sucesso!');
         } else {
@@ -92,13 +127,13 @@ document.getElementById('buscarEndereco').addEventListener('click', async functi
 });
 
 // Preview da foto
-document.getElementById('foto').addEventListener('change', function (e) {
+document.getElementById('foto').addEventListener('change', function(e) {
     const file = e.target.files[0];
     const preview = document.getElementById('photoPreview');
 
     if (file) {
         const reader = new FileReader();
-        reader.onload = function (e) {
+        reader.onload = function(e) {
             preview.src = e.target.result;
             preview.style.display = 'block';
         };
@@ -110,7 +145,7 @@ document.getElementById('foto').addEventListener('change', function (e) {
 });
 
 function getMarkerColor(severidade) {
-    switch (severidade) {
+    switch(severidade) {
         case 'baixa': return '#28a745';
         case 'media': return '#ffc107';
         case 'alta': return '#dc3545';
@@ -119,7 +154,7 @@ function getMarkerColor(severidade) {
 }
 
 function addMarker(alerta) {
-    // CORREÇÃO #2: Uso de template string (`...`) para o HTML
+    // Uso de template string (`...`) para o HTML do ícone
     const customIcon = L.divIcon({
         className: 'custom-marker',
         html: `<div style="background-color: ${getMarkerColor(alerta.severidade)}; width: 25px; height: 25px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.3);"></div>`,
@@ -127,7 +162,7 @@ function addMarker(alerta) {
         iconAnchor: [12.5, 12.5]
     });
 
-    // CORREÇÃO #3: Uso de template string (`...`) para o popupContent
+    // Uso de template string (`...`) para o popupContent
     const popupContent = `
         <strong>${alerta.tipo}</strong><br>
         <em>Severidade: ${alerta.severidade.toUpperCase()}</em><br>
@@ -167,10 +202,10 @@ function applyFilters() {
         hoje.setHours(0, 0, 0, 0);
 
         alertasFiltrados = alertasFiltrados.filter(a => {
-            if (!a.timestamp) return false;
+            if (!a.timestamp) return false; 
             const dataAlerta = new Date(a.timestamp);
-
-            switch (periodoFiltro) {
+            
+            switch(periodoFiltro) {
                 case 'hoje':
                     return dataAlerta >= hoje;
                 case 'semana':
@@ -189,7 +224,7 @@ function applyFilters() {
 
     // Atualiza a lista e os marcadores no mapa com base nos filtros
     updateAlertList(alertasFiltrados);
-    updateMarkersOnMap(alertasFiltrados);
+    updateMarkersOnMap(alertasFiltrados); 
 }
 
 // Event listeners para filtros
@@ -199,14 +234,14 @@ document.getElementById('filterPeriodo').addEventListener('change', applyFilters
 
 function updateAlertList(alertasParaExibir = alertas) {
     const alertList = document.getElementById('alertList');
-
+    
     if (alertasParaExibir.length === 0) {
         alertList.innerHTML = '<p style="text-align: center; color: #999; padding: 20px;">Nenhuma ocorrência encontrada.</p>';
         return;
     }
 
     // Inverte a lista para mostrar o mais novo primeiro
-    const alertasOrdenados = [...alertasParaExibir].reverse();
+    const alertasOrdenados = [...alertasParaExibir].reverse(); 
 
     alertList.innerHTML = alertasOrdenados.map(alerta => `
         <div class="alert-item">
@@ -224,17 +259,17 @@ function updateAlertList(alertasParaExibir = alertas) {
 
 function updateStats() {
     document.getElementById('totalAlertas').textContent = alertas.length;
-
+    
     const hoje = new Date();
     hoje.setHours(0, 0, 0, 0);
     const alertasHoje = alertas.filter(a => new Date(a.timestamp) >= hoje).length;
     document.getElementById('alertasHoje').textContent = alertasHoje;
-
+    
     const alertasAlta = alertas.filter(a => a.severidade === 'alta').length;
     document.getElementById('alertasAlta').textContent = alertasAlta;
 }
 
-document.getElementById('alertForm').addEventListener('submit', function (e) {
+document.getElementById('alertForm').addEventListener('submit', function(e) {
     e.preventDefault();
 
     const fotoInput = document.getElementById('foto');
@@ -251,33 +286,39 @@ document.getElementById('alertForm').addEventListener('submit', function (e) {
             descricao: document.getElementById('descricao').value,
             foto: fotoBase64,
             dataHora: new Date().toLocaleString('pt-BR'),
-            timestamp: new Date().getTime()
+            timestamp: new Date().getTime() 
         };
 
         alertas.push(alerta);
-
+        
         // Reaplicar filtros para que o novo marcador só apareça se as condições forem atendidas
-        applyFilters();
-
+        applyFilters(); 
+        
         map.setView([alerta.latitude, alerta.longitude], 15);
 
         saveToStorage();
+        
+        // 💡 Limpar o marcador temporário após o registro
+        if (tempMarker) {
+            map.removeLayer(tempMarker);
+            tempMarker = null;
+        }
 
         this.reset();
         document.getElementById('photoPreview').style.display = 'none';
-        document.getElementById('photoPreview').src = '';
+        document.getElementById('photoPreview').src = ''; 
 
         alert('✅ Ocorrência registrada com sucesso!');
     };
 
     if (fotoFile) {
         if (fotoFile.size > 2 * 1024 * 1024) { // Limite de 2MB para LocalStorage
-            alert('❌ A foto é muito grande. Por favor, selecione uma menor (máx 2MB).');
-            return;
+             alert('❌ A foto é muito grande. Por favor, selecione uma menor (máx 2MB).');
+             return;
         }
 
         const reader = new FileReader();
-        reader.onload = function (e) {
+        reader.onload = function(e) {
             processarAlerta(e.target.result);
         };
         reader.readAsDataURL(fotoFile);
@@ -292,15 +333,15 @@ const clearBtn = document.getElementById('clearData');
 const cancelBtn = document.getElementById('cancelBtn');
 const confirmBtn = document.getElementById('confirmBtn');
 
-clearBtn.addEventListener('click', function () {
+clearBtn.addEventListener('click', function() {
     modal.style.display = 'block';
 });
 
-cancelBtn.addEventListener('click', function () {
+cancelBtn.addEventListener('click', function() {
     modal.style.display = 'none';
 });
 
-confirmBtn.addEventListener('click', function () {
+confirmBtn.addEventListener('click', function() {
     alertas = [];
     markers.forEach(marker => map.removeLayer(marker));
     markers = [];
@@ -311,14 +352,14 @@ confirmBtn.addEventListener('click', function () {
     alert('✅ Todos os dados foram removidos!');
 });
 
-window.addEventListener('click', function (e) {
+window.addEventListener('click', function(e) {
     if (e.target === modal) {
         modal.style.display = 'none';
     }
 });
 
 // Exportar PDF
-document.getElementById('exportPDF').addEventListener('click', function () {
+document.getElementById('exportPDF').addEventListener('click', function() {
     if (alertas.length === 0) {
         alert('Não há ocorrências para exportar!');
         return;
@@ -328,10 +369,10 @@ document.getElementById('exportPDF').addEventListener('click', function () {
         alert('❌ A biblioteca jsPDF não está carregada. Verifique o script tag no seu HTML.');
         return;
     }
-
+    
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
-
+    
     const pageWidth = doc.internal.pageSize.getWidth();
     const margin = 20;
     let yPosition = 20;
@@ -339,16 +380,16 @@ document.getElementById('exportPDF').addEventListener('click', function () {
     doc.setFontSize(18);
     doc.setFont(undefined, 'bold');
     doc.text('RELATÓRIO DE OCORRÊNCIAS', pageWidth / 2, yPosition, { align: 'center' });
-
+    
     yPosition += 10;
     doc.setFontSize(12);
     doc.setFont(undefined, 'normal');
     doc.text('Sistema de Alertas da Defesa Civil', pageWidth / 2, yPosition, { align: 'center' });
-
+    
     yPosition += 5;
     doc.setFontSize(10);
     doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, pageWidth / 2, yPosition, { align: 'center' });
-
+    
     yPosition += 10;
     doc.setLineWidth(0.5);
     doc.line(margin, yPosition, pageWidth - margin, yPosition);
@@ -358,18 +399,18 @@ document.getElementById('exportPDF').addEventListener('click', function () {
     doc.setFont(undefined, 'bold');
     doc.text('ESTATÍSTICAS GERAIS', margin, yPosition);
     yPosition += 7;
-
+    
     doc.setFont(undefined, 'normal');
     doc.setFontSize(10);
     doc.text(`Total de Ocorrências: ${alertas.length}`, margin, yPosition);
     yPosition += 5;
-
+    
     const hoje = new Date();
     hoje.setHours(0, 0, 0, 0);
     const alertasHoje = alertas.filter(a => new Date(a.timestamp) >= hoje).length;
     doc.text(`Ocorrências Hoje: ${alertasHoje}`, margin, yPosition);
     yPosition += 5;
-
+    
     const alertasPorSeveridade = {
         alta: alertas.filter(a => a.severidade === 'alta').length,
         media: alertas.filter(a => a.severidade === 'media').length,
@@ -387,7 +428,7 @@ document.getElementById('exportPDF').addEventListener('click', function () {
     yPosition += 10;
 
     // Exporta os alertas em ordem cronológica inversa (mais novo primeiro)
-    const alertasParaPDF = [...alertas].reverse();
+    const alertasParaPDF = [...alertas].reverse(); 
 
     alertasParaPDF.forEach((alerta, index) => {
         // Quebra de página
@@ -403,7 +444,7 @@ document.getElementById('exportPDF').addEventListener('click', function () {
 
         doc.setFont(undefined, 'normal');
         doc.setFontSize(9);
-
+        
         // Define a cor do texto para Severidade
         doc.setTextColor(
             alerta.severidade === 'alta' ? 220 : alerta.severidade === 'media' ? 255 : 40,
@@ -416,7 +457,7 @@ document.getElementById('exportPDF').addEventListener('click', function () {
 
         doc.text(`Local: ${alerta.endereco}`, margin + 5, yPosition);
         yPosition += 5;
-
+        
         doc.text(`Coordenadas: ${alerta.latitude}, ${alerta.longitude}`, margin + 5, yPosition);
         yPosition += 5;
 
@@ -443,11 +484,12 @@ document.getElementById('exportPDF').addEventListener('click', function () {
 
     const dataAtual = new Date().toISOString().split('T')[0];
     doc.save(`relatorio-defesa-civil-${dataAtual}.pdf`);
-
+    
     alert('✅ Relatório PDF gerado com sucesso!');
 });
 
-window.onload = function () {
+// Garante que o mapa e os dados sejam inicializados apenas após o carregamento completo do HTML
+window.onload = function() {
     initMap();
     loadFromStorage();
 };
