@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Alertas da Defesa Civil - Mapa</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>🚨 Sistema de Alertas da Defesa Civil</h1>
+            <p class="subtitle">Monitoramento e registro de ocorrências em tempo real</p>
+        </header>
+
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-number" id="totalAlertas">0</div>
+                <div class="stat-label">Total de Alertas</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="alertasHoje">0</div>
+                <div class="stat-label">Alertas Hoje</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="alertasAlta">0</div>
+                <div class="stat-label">Severidade Alta</div>
+            </div>
+        </div>
+
+        <div class="main-grid">
+            <div class="card">
+                <h2>📍 Mapa de Ocorrências</h2>
+                <div id="map"></div>
+            </div>
+
+            <div class="card">
+                <h2>➕ Cadastrar Nova Ocorrência</h2>
+                <form id="alertForm">
+                    <div class="form-group">
+                        <label>Tipo de Ocorrência</label>
+                        <select id="tipoOcorrencia" required>
+                            <option value="">Selecione...</option>
+                            <option value="Alagamento">💧 Alagamento</option>
+                            <option value="Deslizamento">⛰️ Deslizamento</option>
+                            <option value="Vendaval">🌪️ Vendaval</option>
+                            <option value="Queda de Árvore">🌳 Queda de Árvore</option>
+                            <option value="Incêndio">🔥 Incêndio</option>
+                            <option value="Outros">⚠️ Outros</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Severidade</label>
+                        <select id="severidade" required>
+                            <option value="baixa">Baixa</option>
+                            <option value="media">Média</option>
+                            <option value="alta">Alta</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Endereço/Local</label>
+                        <input type="text" id="endereco" placeholder="Ex: Rua das Flores, 123, São Paulo" required>
+                        <button type="button" class="geocoding-btn" id="buscarEndereco">
+                            🔍 Buscar Coordenadas
+                        </button>
+                        <p class="help-text">Digite o endereço completo e clique para buscar as coordenadas
+                            automaticamente</p>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Latitude</label>
+                        <input type="number" step="any" id="latitude" placeholder="Ex: -23.550520" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Longitude</label>
+                        <input type="number" step="any" id="longitude" placeholder="Ex: -46.633308" required>
+                        <p class="help-text">💡 Dica: Clique no mapa para pegar as coordenadas</p>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Descrição</label>
+                        <textarea id="descricao" placeholder="Descreva a ocorrência..." required></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Foto (opcional)</label>
+                        <input type="file" id="foto" accept="image/*">
+                        <img id="photoPreview" class="photo-preview" alt="Preview">
+                    </div>
+
+                    <button type="submit">Registrar Ocorrência</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>📋 Ocorrências Registradas</h2>
+
+            <div class="filters">
+                <div class="filter-group">
+                    <label>Filtrar por Tipo</label>
+                    <select id="filterTipo">
+                        <option value="">Todos</option>
+                        <option value="Alagamento">Alagamento</option>
+                        <option value="Deslizamento">Deslizamento</option>
+                        <option value="Vendaval">Vendaval</option>
+                        <option value="Queda de Árvore">Queda de Árvore</option>
+                        <option value="Incêndio">Incêndio</option>
+                        <option value="Outros">Outros</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Filtrar por Severidade</label>
+                    <select id="filterSeveridade">
+                        <option value="">Todas</option>
+                        <option value="baixa">Baixa</option>
+                        <option value="media">Média</option>
+                        <option value="alta">Alta</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Filtrar por Período</label>
+                    <select id="filterPeriodo">
+                        <option value="todos">Todos</option>
+                        <option value="hoje">Hoje</option>
+                        <option value="semana">Última Semana</option>
+                        <option value="mes">Último Mês</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="button-group">
+                <button id="exportPDF" class="btn-success">
+                    📄 Exportar PDF
+                </button>
+                <button id="clearData" class="btn-danger">
+                    🗑️ Limpar Dados
+                </button>
+            </div>
+
+            <div class="alert-list" id="alertList">
+                <p style="text-align: center; color: #999; padding: 20px;">Nenhuma ocorrência registrada ainda.</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="confirmModal" class="modal">
+        <div class="modal-content">
+            <h3 style="margin-bottom: 15px;">⚠️ Confirmar Exclusão</h3>
+            <p>Tem certeza que deseja excluir TODAS as ocorrências?</p>
+            <p style="color: 
+#dc3545; font-weight: bold; margin-top: 10px;">Esta ação não pode ser desfeita!</p>
+            <div class="modal-buttons">
+                <button id="cancelBtn" class="btn-secondary">Cancelar</button>
+                <button id="confirmBtn" class="btn-danger">Sim, Excluir</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+
+</body>
+
+</html>
